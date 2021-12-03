@@ -6,7 +6,7 @@ This repo contains the source code and dataset for our paper:
 <br>
 2021 Conference on Neural Information Processing Systems (NeurIPS 2021)
 <br>
-[paper](https://papers.nips.cc/paper/2021/file/75fc093c0ee742f6dddaa13fff98f104-Paper.pdf)
+[[Paper]](https://papers.nips.cc/paper/2021/file/75fc093c0ee742f6dddaa13fff98f104-Paper.pdf)
 
 <div>
     <div style="display: none;" id="egsc2021">
@@ -71,6 +71,7 @@ torch-scatter     2.0.6
 torch-sparse      0.6.9
 tqdm              4.60.0
 ```
+The installation of pytorch-geometric (PyG) please refers to its [official tutorial](https://pytorch-geometric.readthedocs.io/en/latest/notes/installation.html).
 
 ## File Structure
 ```
