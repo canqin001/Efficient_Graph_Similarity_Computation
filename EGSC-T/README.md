@@ -19,7 +19,7 @@ If you run the experiment on ALKANE, then
 ```
 python src/main.py --dataset ALKANE --gnn-operator gin --epochs 6000 --batch-size 128 --learning-rate 0.001
 ```
-, or run experiments on all adaptation scenarios.
+, or run experiments on all scenarios.
 ```
 bash train.sh
 ```
