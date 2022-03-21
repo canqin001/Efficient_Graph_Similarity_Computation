@@ -31,7 +31,7 @@ Graph Similarity Computation (GSC) is essential to wide-ranging graph appli- cat
 ## Dataset
 We have used the standard dataloader, i.e., ‘GEDDataset’, directly provided in the [PyG](https://pytorch-geometric.readthedocs.io/en/latest/_modules/torch_geometric/datasets/ged_dataset.html#GEDDataset).
 
-[AIDS700nef] (https://drive.google.com/uc?export=download&id=10czBPJDEzEDI2tq7Z7mkBjLhj55F-a2z).
+```[AIDS700nef]``` (https://drive.google.com/uc?export=download&id=10czBPJDEzEDI2tq7Z7mkBjLhj55F-a2z).
 
 [LINUX] (https://drive.google.com/uc?export=download&id=1nw0RRVgyLpit4V4XFQyDy0pI6wUEXSOI).
 
