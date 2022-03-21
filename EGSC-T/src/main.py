@@ -4,9 +4,6 @@ from parser import parameter_parser
 
 
 def main():
-    """
-    Parsing command line parameters, reading data, fitting and scoring a SimGNN model.
-    """
     args = parameter_parser()
     tab_printer(args)
     trainer = EGSCTrainer(args)
