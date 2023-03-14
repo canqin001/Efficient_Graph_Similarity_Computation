@@ -6,7 +6,7 @@ from tqdm import tqdm, trange
 from scipy.stats import spearmanr, kendalltau
 
 from layers import AttentionModule, TensorNetworkModule, DiffPool
-from utils import calculate_ranking_correlation, calculate_prec_at_k, gen_pairs
+from utils import calculate_ranking_correlation, calculate_prec_at_k, gen_pairs, feature_augmentation
 
 from torch_geometric.nn import GCNConv, GINConv
 from torch_geometric.data import DataLoader, Batch
@@ -14,11 +14,21 @@ from torch_geometric.utils import to_dense_batch, to_dense_adj, degree
 from torch_geometric.datasets import GEDDataset
 from torch_geometric.transforms import OneHotDegree
 
-import matplotlib.pyplot as plt
+
+
+# import matplotlib.pyplot as plt
 
 from model import EGSCT_generator, EGSCT_classifier
 
 import pdb
+import copy
+from itertools import repeat
+from torch_geometric.data import Data
+from torch_geometric.loader import DataLoader
+
+torch.manual_seed(0)
+random.seed(0)
+np.random.seed(0)
 
 class EGSCTrainer(object):
     def __init__(self, args):
@@ -34,6 +44,8 @@ class EGSCTrainer(object):
         self.best_prec_at_20 = 0
         self.best_model_error = float('inf')
 
+        print('self.args.feature_aug', self.args.feature_aug)
+        print('self.args.dataset', self.args.dataset)
 
     def setup_model(self):
         """
@@ -89,8 +101,15 @@ class EGSCTrainer(object):
         self.real_data_size = self.nged_matrix.size(0)
         
         if self.args.synth:
-            self.synth_data_1, self.synth_data_2, _, synth_nged_matrix = gen_pairs(self.training_graphs.shuffle()[:500], 0, 3)  
-            
+            if self.args.feature_aug == -1:  # origin shuffle + origin dataset
+                self.synth_data_1, self.synth_data_2, _, synth_nged_matrix = gen_pairs(self.training_graphs.shuffle()[:500], 0, 3)  
+            else:
+                # random.shuffle(self.training_graphs)
+                # perm = torch.randperm(len(self.training_graphs))
+                # temp_dataset = self.training_graphs(perm)
+                temp_dataset_shuffle = copy.deepcopy(self.training_graphs)
+                random.shuffle(temp_dataset_shuffle)
+                self.synth_data_1, self.synth_data_2, _, synth_nged_matrix = gen_pairs(temp_dataset_shuffle[:500], 0, 3)  
             real_data_size = self.nged_matrix.size(0)
             synth_data_size = synth_nged_matrix.size(0)
             self.nged_matrix = torch.cat((self.nged_matrix, torch.full((real_data_size, synth_data_size), float('inf'))), dim=1)
@@ -102,20 +121,34 @@ class EGSCTrainer(object):
             for g in self.training_graphs + self.testing_graphs + (self.synth_data_1 + self.synth_data_2 if self.args.synth else []):
                 if g.edge_index.size(1) > 0:
                     max_degree = max(max_degree, int(degree(g.edge_index[0]).max().item()))
+            # Adds the node degree as one hot encodings to the node features (functional name: one_hot_degree).        
             one_hot_degree = OneHotDegree(max_degree, cat=False)
             self.training_graphs.transform = one_hot_degree
             self.testing_graphs.transform = one_hot_degree
         
+        print('-----')
+        print('self.number_of_labels before', self.testing_graphs[0].x.shape[-1])
+        
+        if (self.args.feature_aug) <= 0:
+            self.number_of_labels = self.training_graphs.num_features 
+
+        if self.args.feature_aug >= 0:
+            self.training_graphs = feature_augmentation(self.training_graphs, self.args.feature_aug)
+            self.testing_graphs = feature_augmentation(self.testing_graphs, self.args.feature_aug)
+            if self.args.feature_aug > 0:
+                self.number_of_labels = self.testing_graphs[0].x.shape[-1]
+
         # labeling of synth data according to real data format    
-            if self.args.synth:
-                for g in self.synth_data_1 + self.synth_data_2:
-                    g = one_hot_degree(g)
-                    g.i = g.i + real_data_size
+        if self.args.synth:
+            for g in self.synth_data_1 + self.synth_data_2:
+                g = one_hot_degree(g)
+                g.i = g.i + real_data_size
         elif self.args.synth:
             for g in self.synth_data_1 + self.synth_data_2:
                 g.i = g.i + real_data_size
-                    
-        self.number_of_labels = self.training_graphs.num_features
+
+        print('self.number_of_labels after', self.testing_graphs[0].x.shape[-1])
+        print('-----')
 
     def create_batches(self):
         """
@@ -125,10 +158,20 @@ class EGSCTrainer(object):
         if self.args.synth:
             synth_data_ind = random.sample(range(len(self.synth_data_1)), 100)
         
-        source_loader = DataLoader(self.training_graphs.shuffle() + 
-            ([self.synth_data_1[i] for i in synth_data_ind] if self.args.synth else []), batch_size=self.args.batch_size)
-        target_loader = DataLoader(self.training_graphs.shuffle() + 
-            ([self.synth_data_2[i] for i in synth_data_ind] if self.args.synth else []), batch_size=self.args.batch_size)
+        if self.args.feature_aug == -1:
+            source_loader = DataLoader(self.training_graphs.shuffle() + 
+                ([self.synth_data_1[i] for i in synth_data_ind] if self.args.synth else []), batch_size=self.args.batch_size)
+            target_loader = DataLoader(self.training_graphs.shuffle() + 
+                ([self.synth_data_2[i] for i in synth_data_ind] if self.args.synth else []), batch_size=self.args.batch_size)
+        else:
+            temp_dataset_shuffle_1 = copy.deepcopy(self.training_graphs)
+            random.shuffle(temp_dataset_shuffle_1)
+            source_loader = DataLoader(temp_dataset_shuffle_1 + 
+                ([self.synth_data_1[i] for i in synth_data_ind] if self.args.synth else []), batch_size=self.args.batch_size)
+            temp_dataset_shuffle_2 = copy.deepcopy(self.training_graphs)
+            random.shuffle(temp_dataset_shuffle_2)
+            target_loader = DataLoader(temp_dataset_shuffle_2 + 
+                ([self.synth_data_2[i] for i in synth_data_ind] if self.args.synth else []), batch_size=self.args.batch_size)
         
         return list(zip(source_loader, target_loader))
 
@@ -142,6 +185,8 @@ class EGSCTrainer(object):
 
         new_data["g1"] = data[0]
         new_data["g2"] = data[1]
+
+        
 
         normalized_ged = self.nged_matrix[data[0]["i"].reshape(-1).tolist(),data[1]["i"].reshape(-1).tolist()].tolist()
         
@@ -180,7 +225,7 @@ class EGSCTrainer(object):
         self.model_g.train()
         self.model_c.train()
 
-        
+        print('self.args.feature_aug', self.args.feature_aug)
         epochs = trange(self.args.epochs, leave=True, desc = "Epoch")
         loss_list = []
         loss_list_test = []
@@ -195,15 +240,30 @@ class EGSCTrainer(object):
                     t = tqdm(total=cnt_test*cnt_train, position=2, leave=False, desc = "Validation")
                     scores = torch.empty((cnt_test, cnt_train))
                     
-                    for i, g in enumerate(self.testing_graphs[:cnt_test].shuffle()):
-                        source_batch = Batch.from_data_list([g]*cnt_train)
-                        target_batch = Batch.from_data_list(self.training_graphs[:cnt_train].shuffle())
-                        data = self.transform((source_batch, target_batch))
-                        target = data["target"]
-                        prediction = self.model_c(self.model_g(data))
-                        
-                        scores[i] = F.mse_loss(prediction, target, reduction='none').detach()
-                        t.update(cnt_train)
+                    if self.args.feature_aug == -1:
+                        for i, g in enumerate(self.testing_graphs[:cnt_test].shuffle()):
+                            source_batch = Batch.from_data_list([g]*cnt_train)
+                            target_batch = Batch.from_data_list(self.training_graphs[:cnt_train].shuffle())
+                            data = self.transform((source_batch, target_batch))
+                            target = data["target"]
+                            prediction = self.model_c(self.model_g(data)) # why???
+                            
+                            scores[i] = F.mse_loss(prediction, target, reduction='none').detach()
+                            t.update(cnt_train)
+                    else:
+                        temp1 = copy.deepcopy(self.testing_graphs[:cnt_test])
+                        random.shuffle(temp1)
+                        for i, g in enumerate(temp1):
+                            source_batch = Batch.from_data_list([g]*cnt_train)
+                            temp2 = copy.deepcopy(self.training_graphs[:cnt_train])
+                            random.shuffle(temp2)
+                            target_batch = Batch.from_data_list(temp2)
+                            data = self.transform((source_batch, target_batch))
+                            target = data["target"]
+                            prediction = self.model_c(self.model_g(data)) # why???
+                            
+                            scores[i] = F.mse_loss(prediction, target, reduction='none').detach()
+                            t.update(cnt_train)
                     
                     t.close()
                     loss_list_test.append(scores.mean().item())
@@ -221,7 +281,7 @@ class EGSCTrainer(object):
             epochs.set_description("Epoch (Loss=%g)" % round(loss,5))
             loss_list.append(loss)
             
-        if self.args.plot:
+        if False and self.args.plot:
             plt.plot(loss_list, label="Train")
             plt.plot([*range(0, self.args.epochs, 10)], loss_list_test, label="Validation")
             plt.ylim([0, 0.01])

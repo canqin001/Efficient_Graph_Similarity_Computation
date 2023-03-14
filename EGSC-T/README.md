@@ -2,6 +2,13 @@
 
 ![EGSC-T](../Figs/Teacher-Net.png)
 
+## Feature Augmentation
+```
+--feature-aug -1: orig baseline with orign shuffle function
+--feature-aug 0 (default): orig baseline with updated shuffle function
+
+```
+
 ## Train & Test
 If you run the experiment on AIDS, then
 ```
@@ -23,3 +30,5 @@ python src/main.py --dataset ALKANE --gnn-operator gin --epochs 6000 --batch-siz
 ```
 bash main.sh
 ```
+
+

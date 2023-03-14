@@ -92,11 +92,17 @@ def parameter_parser():
                         dest="notify",
                         action="store_true",
                         help="Send notification message when the code is finished (only Linux & Mac OS support).")
-
+    
+    parser.add_argument("--feature-aug",
+                        type=int,
+                        default=1,
+                        help="feature augmentation type")
+    
     parser.set_defaults(plot=False)
     parser.set_defaults(load_pretrain=False)
     parser.set_defaults(measure_time=False)
     parser.set_defaults(synth=False)
     parser.set_defaults(notify=False)
+    parser.set_defaults(feature_aug=0)
 
     return parser.parse_args()
