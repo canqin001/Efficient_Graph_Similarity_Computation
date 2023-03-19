@@ -24,9 +24,9 @@ from layers import RkdDistance, RKdAngle, repeat_certain_graph
 import copy
 from itertools import repeat
 
-torch.manual_seed(0)
-random.seed(0)
-np.random.seed(0)
+# torch.manual_seed(0)
+# random.seed(0)
+# np.random.seed(0)
 
 class EGSC_KD_Trainer(object):
     def __init__(self, args):
