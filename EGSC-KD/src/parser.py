@@ -122,6 +122,11 @@ def parameter_parser():
     parser.add_argument("--kd_layer",
                             default="c0",
                             help="c0, c1")
+    
+    parser.add_argument("--feature-aug",
+                        type=int,
+                        default=1,
+                        help="feature augmentation type")
 
     parser.set_defaults(histogram=False)
     parser.set_defaults(diffpool=False)
@@ -130,5 +135,6 @@ def parameter_parser():
     parser.set_defaults(measure_time=False)
     parser.set_defaults(notify=False)
     parser.set_defaults(synth=False)
+    parser.set_defaults(feature_aug=0)
 
     return parser.parse_args()

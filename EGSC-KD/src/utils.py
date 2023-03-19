@@ -6,11 +6,18 @@ import random
 from texttable import Texttable
 from torch_geometric.utils import erdos_renyi_graph, to_undirected, to_networkx
 from torch_geometric.data import Data
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 import torch_scatter
 
 import pdb
+import pdb
+import copy
+from itertools import repeat
+
+torch.manual_seed(0)
+random.seed(0)
+np.random.seed(0)
 
 def scatter_(name, src, index, dim=0, dim_size=None):
     r"""Aggregates all values from the :attr:`src` tensor at the indices
@@ -221,46 +228,119 @@ def aids_labels(g):
     
     return [types[i] for i in g.x.argmax(dim=1).tolist()]
 
+def feature_augmentation(dataset, feature_aug_options):
+    print('dataset', dataset)
+    copy_dataset = copy.deepcopy(dataset)
+    temp_dataset = []
+
+    for idx, graph_item in enumerate(copy_dataset):
+        edge_index = graph_item.edge_index
+        size = graph_item.x.shape[0]
+        node_degree = list(repeat(0, size))
+        aug_feature_list = []
+        queue = []
+        visited = {}
+
+        [graph_adj1, graph_adj2] = edge_index.numpy()
+
+        w, h = size, size
+        full_adj = [[0 for x in range(w)] for y in range(h)] 
+        for idx in range (0, len(graph_adj1)):
+            full_adj[graph_adj1[idx]][graph_adj2[idx]] = 1
+
+        A = np.array(full_adj)
+
+        # number of nodes in the graph
+        # n = A.shape[0]
+
+        for node_idx in range(0, size):
+            temp_list = [0 for i in range(11) ]
+            aug_feature_list.append(temp_list)
+        
+        
+        # method 1: fast identity GIN
+        if feature_aug_options == 1: # save if a route exitst
+        # calculate the counts of length k up to a maximum length of max_k
+            max_k = min(10, size)
+            for k in range(3, max_k+1):
+                Ak = np.linalg.matrix_power(A, k)
+
+                for j in range(0, len(Ak)):
+                    if(Ak[j][j] > 0):
+                        aug_feature_list[j][k] = 1
+        
+        elif feature_aug_options == 2: # save the count of routes
+            max_k = min(10, size)
+            for k in range(3, max_k+1):
+                Ak = np.linalg.matrix_power(A, k)
+
+                for j in range(0, len(Ak)):
+                    if(Ak[j][j] > 0):
+                        aug_feature_list[j][k] = float(min(round(Ak[j][j] / (2*size), 2), 1))
+
+
+        elif feature_aug_options == 3: # only count the number of triangles
+            max_k = 3
+
+            for k in range(3, max_k+1):
+                Ak = np.linalg.matrix_power(A, k)
+                for j in range(0, len(Ak)):
+                    if(Ak[j][j] > 0):
+                        Ak[j][j] = Ak[j][j] // 2 
+                        count_triangle = min(Ak[j][j], 10)
+                        # aug_feature_list[j][k] = round(Ak[j][j] / (2*size),2)
+                        aug_feature_list[j][count_triangle] = 1
+
+        aug_feature_list = torch.tensor(aug_feature_list)
+
+        # only do feature augmentation when self.args.feature_aug > 0
+        if feature_aug_options > 0: 
+            graph_item.x = torch.cat((graph_item.x, aug_feature_list), 1)
+
+        temp_dataset.append(graph_item)
+    return temp_dataset
 
 def draw_graphs(glist, aids=False):
-    for i, g in enumerate(glist):
-        plt.clf()
-        G = to_networkx(g).to_undirected()
-        if aids:
-            label_list = aids_labels(g)
-            labels = {}
-            for j, node in enumerate(G.nodes()):
-                labels[node] = label_list[j]
-            nx.draw(G, labels=labels)
-        else:
-            nx.draw(G)
-        plt.savefig('graph{}.png'.format(i))
+    ...
+    # for i, g in enumerate(glist):
+    #     plt.clf()
+    #     G = to_networkx(g).to_undirected()
+    #     if aids:
+    #         label_list = aids_labels(g)
+    #         labels = {}
+    #         for j, node in enumerate(G.nodes()):
+    #             labels[node] = label_list[j]
+    #         nx.draw(G, labels=labels)
+    #     else:
+    #         nx.draw(G)
+    #     plt.savefig('graph{}.png'.format(i))
 
 
 def draw_weighted_nodes(filename, g, model):
-    """
-    Draw graph with weighted nodes (for AIDS).
-    """
-    features = model.convolutional_pass(g.edge_index, g.x)
-    coefs = model.attention.get_coefs(features)
+    ...
+    # """
+    # Draw graph with weighted nodes (for AIDS).
+    # """
+    # features = model.convolutional_pass(g.edge_index, g.x)
+    # coefs = model.attention.get_coefs(features)
     
-    print(coefs)
+    # print(coefs)
     
-    plt.clf()
-    G = to_networkx(g).to_undirected()
+    # plt.clf()
+    # G = to_networkx(g).to_undirected()
     
-    label_list = aids_labels(g)
-    labels = {}
-    for i, node in enumerate(G.nodes()):
-        labels[node] = label_list[i]
+    # label_list = aids_labels(g)
+    # labels = {}
+    # for i, node in enumerate(G.nodes()):
+    #     labels[node] = label_list[i]
     
-    vmin = coefs.min().item() - 0.005
-    vmax = coefs.max().item() + 0.005
+    # vmin = coefs.min().item() - 0.005
+    # vmax = coefs.max().item() + 0.005
 
-    nx.draw(G, node_color=coefs.tolist(), cmap=plt.cm.Reds, labels=labels, vmin=vmin, vmax=vmax)
+    # nx.draw(G, node_color=coefs.tolist(), cmap=plt.cm.Reds, labels=labels, vmin=vmin, vmax=vmax)
 
-    # sm = plt.cm.ScalarMappable(cmap=plt.cm.Reds, norm=plt.Normalize(vmin=vmin, vmax=vmax))
-    # sm.set_array(coefs.tolist())
-    # cbar = plt.colorbar(sm)
+    # # sm = plt.cm.ScalarMappable(cmap=plt.cm.Reds, norm=plt.Normalize(vmin=vmin, vmax=vmax))
+    # # sm.set_array(coefs.tolist())
+    # # cbar = plt.colorbar(sm)
 
-    plt.savefig(filename)
+    # plt.savefig(filename)
