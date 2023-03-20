@@ -59,12 +59,22 @@ class EGSCTrainer(object):
         """
         Saving a EGSC.
         """
-        PATH_g = './model_saved/EGSC_g_EarlyFusion_' +str(self.args.dataset)+"_"+str(self.args.gnn_operator)+"_"+ str(round(self.model_error*1000, 5))+"_" \
-        + str(self.args.epochs)+"_"+str(self.args.batch_size)+"_"+str(self.args.learning_rate) +'_checkpoint.pth'
+
+        PATH_g = './model_saved_wenzhao/EGSC_g_EarlyFusion_' +str(self.args.dataset)+"_"+str(self.args.gnn_operator)+"_"+ str(round(self.model_error*1000, 5))+"_" \
+        + str(self.args.epochs)+"_"+str(self.args.batch_size)+"_"+str(self.args.learning_rate) + "_" + str(self.args.feature_aug) +'_checkpoint.pth'
         torch.save(self.model_g.state_dict(), PATH_g)
 
-        PATH_c = './model_saved/EGSC_c_EarlyFusion_' +str(self.args.dataset)+"_"+str(self.args.gnn_operator)+"_"+ str(round(self.model_error*1000, 5))+"_" \
-        + str(self.args.epochs)+"_"+str(self.args.batch_size)+"_"+str(self.args.learning_rate) +'_checkpoint.pth'
+        PATH_c = './model_saved_wenzhao/EGSC_c_EarlyFusion_' +str(self.args.dataset)+"_"+str(self.args.gnn_operator)+"_"+ str(round(self.model_error*1000, 5))+"_" \
+        + str(self.args.epochs)+"_"+str(self.args.batch_size)+"_"+str(self.args.learning_rate) + "_" + str(self.args.feature_aug) +'_checkpoint.pth'
+        torch.save(self.model_c.state_dict(), PATH_c)
+        print('Model Saved')
+
+        PATH_g = '../Checkpoints_wenzhao/EGSC_g_EarlyFusion_' +str(self.args.dataset)+"_"+str(self.args.gnn_operator)+"_" \
+        + str(self.args.epochs)+"_"+str(self.args.batch_size)+"_"+str(self.args.learning_rate) + "_" + str(self.args.feature_aug) +'_checkpoint.pth'
+        torch.save(self.model_g.state_dict(), PATH_g)
+
+        PATH_c = '../Checkpoints_wenzhao/EGSC_c_EarlyFusion_' +str(self.args.dataset)+"_"+str(self.args.gnn_operator)+"_" \
+        + str(self.args.epochs)+"_"+str(self.args.batch_size)+"_"+str(self.args.learning_rate) + "_" + str(self.args.feature_aug) +'_checkpoint.pth'
         torch.save(self.model_c.state_dict(), PATH_c)
         print('Model Saved')
 
@@ -72,14 +82,25 @@ class EGSCTrainer(object):
         """
         Loading a EGSC.
         """
-        PATH_g = './model_saved/EGSC_g_EarlyFusion_' +str(self.args.dataset)+"_"+str(self.args.gnn_operator)+"_"+ str(round(self.model_error*1000, 5))+"_" \
-        + str(self.args.epochs)+"_"+str(self.args.batch_size)+"_"+str(self.args.learning_rate) +'_checkpoint.pth'
+        PATH_g = './model_saved_wenzhao/EGSC_g_EarlyFusion_' +str(self.args.dataset)+"_"+str(self.args.gnn_operator)+"_"+ str(round(self.model_error*1000, 5))+"_" \
+        + str(self.args.epochs)+"_"+str(self.args.batch_size)+"_"+str(self.args.learning_rate) + "_" + str(self.args.feature_aug) +'_checkpoint.pth'
         self.model_g.load_state_dict(torch.load(PATH_g))
 
-        PATH_c = './model_saved/EGSC_c_EarlyFusion_' +str(self.args.dataset)+"_"+str(self.args.gnn_operator)+"_"+ str(round(self.model_error*1000, 5))+"_" \
-        + str(self.args.epochs)+"_"+str(self.args.batch_size)+"_"+str(self.args.learning_rate) +'_checkpoint.pth'
+        PATH_c = './model_saved_wenzhao/EGSC_c_EarlyFusion_' +str(self.args.dataset)+"_"+str(self.args.gnn_operator)+"_"+ str(round(self.model_error*1000, 5))+"_" \
+        + str(self.args.epochs)+"_"+str(self.args.batch_size)+"_"+str(self.args.learning_rate) + "_" + str(self.args.feature_aug) +'_checkpoint.pth'
         self.model_c.load_state_dict(torch.load(PATH_c))
+        
         print('Model Loaded')
+
+        # PATH_g = './Checkpoints_wenzhao/EGSC_g_EarlyFusion_' +str(self.args.dataset)+"_"+str(self.args.gnn_operator)+"_"+ str(round(self.model_error*1000, 5))+"_" \
+        # + str(self.args.epochs)+"_"+str(self.args.batch_size)+"_"+str(self.args.learning_rate) + "_" + str(self.args.feature_aug) +'_checkpoint.pth'
+        # self.model_g.load_state_dict(torch.load(PATH_g))
+
+        # PATH_c = './Checkpoints_wenzhao/EGSC_c_EarlyFusion_' +str(self.args.dataset)+"_"+str(self.args.gnn_operator)+"_"+ str(round(self.model_error*1000, 5))+"_" \
+        # + str(self.args.epochs)+"_"+str(self.args.batch_size)+"_"+str(self.args.learning_rate) + "_" + str(self.args.feature_aug) +'_checkpoint.pth'
+        # self.model_c.load_state_dict(torch.load(PATH_c))
+        
+        # print('Model Loaded')
         
     def process_dataset(self):
         """

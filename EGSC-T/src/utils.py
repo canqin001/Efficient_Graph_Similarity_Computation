@@ -312,7 +312,60 @@ def feature_augmentation(dataset, feature_aug_options):
 
         # number of nodes in the graph
         # n = A.shape[0]
+        def cal_circle_BFS(s, adj, size, max_k):
+            res = []
+            if len(adj[s]) < 2: return res
 
+            parent = [-1 for i in range(size)]
+            visited = [False for i in range(size)]
+            # Create a queue for BFS
+            q = []
+            # Mark the current node as
+            temp_set = dict()
+            temp_set['node'] = s
+            temp_set['path'] = [s]
+            q.append(temp_set)
+            visited[s] = 0
+            count = 0
+
+            while q != []:
+                if (count > max_k - 1): return res # keep the depth of BFS within 10 steps
+                count = count + 1
+                cur_len = len(q)
+                #  print('cur_len', cur_len)
+                #  print(q)
+                for i in range(cur_len):
+                    cur_set = q.pop(0)
+                    u = cur_set['node']
+                    #  print('u',u)
+                    #  print('path', cur_set['path'])
+                    if (len(adj[u]) < 2):
+                        continue
+                    for v in adj[u]:
+                        if not v in cur_set['path']:
+                        # if visited[v] == False:
+                            visited[v] = count
+                            new_set = dict()
+                            new_set['node'] = v
+                            cur_path = copy.deepcopy(cur_set['path'])
+                            cur_path.append(v)
+                            new_set['path'] = cur_path
+                            q.append(new_set)
+                            parent[v] = u
+                        elif v in cur_set['path'] and cur_set['path'].index(v) != 0:
+                            # print('wrong', cur_set['path'])
+                            continue
+                        elif v == s and parent[u] != v:
+                            # print('find!!!')
+                            # print(cur_set['path'])
+                            res.append(count)
+                            # return count
+                            # elif parent[u] != v:
+                            #     print('count', count)
+                            #     print('visited[v] count', visited[v])
+                            #     return count
+            return res
+        
         for node_idx in range(0, size):
             temp_list = [0 for i in range(11) ]
             aug_feature_list.append(temp_list)
@@ -364,61 +417,7 @@ def feature_augmentation(dataset, feature_aug_options):
                         # aug_feature_list[j][k] = round(Ak[j][j] / (2*size),2)
                         aug_feature_list[j][count_triangle] = 1
 
-        elif feature_aug_options == 5: # count the existence of closed circle - start and end at the node i
-            def cal_circle_BFS(s, adj, size, max_k):
-                res = []
-                if len(adj[s]) < 2: return res
-
-                parent = [-1 for i in range(size)]
-                visited = [False for i in range(size)]
-                # Create a queue for BFS
-                q = []
-                # Mark the current node as
-                temp_set = dict()
-                temp_set['node'] = s
-                temp_set['path'] = [s]
-                q.append(temp_set)
-                visited[s] = 0
-                count = 0
-
-                while q != []:
-                    if (count > max_k - 1): return res # keep the depth of BFS within 10 steps
-                    count = count + 1
-                    cur_len = len(q)
-                    #  print('cur_len', cur_len)
-                    #  print(q)
-                    for i in range(cur_len):
-                        cur_set = q.pop(0)
-                        u = cur_set['node']
-                        #  print('u',u)
-                        #  print('path', cur_set['path'])
-                        if (len(adj[u]) < 2):
-                            continue
-                        for v in adj[u]:
-                            if not v in cur_set['path']:
-                            # if visited[v] == False:
-                                visited[v] = count
-                                new_set = dict()
-                                new_set['node'] = v
-                                cur_path = copy.deepcopy(cur_set['path'])
-                                cur_path.append(v)
-                                new_set['path'] = cur_path
-                                q.append(new_set)
-                                parent[v] = u
-                            elif v in cur_set['path'] and cur_set['path'].index(v) != 0:
-                                # print('wrong', cur_set['path'])
-                                continue
-                            elif v == s and parent[u] != v:
-                                # print('find!!!')
-                                # print(cur_set['path'])
-                                res.append(count)
-                                # return count
-                                # elif parent[u] != v:
-                                #     print('count', count)
-                                #     print('visited[v] count', visited[v])
-                                #     return count
-                return res
-            
+        elif feature_aug_options == 5: # check the existence of closed circle - start and end at the node i
             for node_idx in range(0, size):
                 max_k = 10
                 temp_res_list = cal_circle_BFS(node_idx, adj, size, max_k) # all the existence circles with various length
@@ -428,7 +427,18 @@ def feature_augmentation(dataset, feature_aug_options):
                 # aug_feature_list.append([temp])
             
             print('our method aug_feature_list', aug_feature_list)
-
+        elif feature_aug_options == 6: # count the number closed circle in length (1...k) - start and end at the node i
+            for node_idx in range(0, size):
+                max_k = 10
+                temp_res_list = cal_circle_BFS(node_idx, adj, size, max_k) # all the existence circles with various length
+                for k in temp_res_list:
+                    aug_feature_list[node_idx][k] = aug_feature_list[node_idx][k] + 1 # 1 represents exist
+                
+                # aug_feature_list.append([temp])
+            # aug_feature_list = np.divide(aug_feature_list, 2)
+            # aug_feature_list = aug_feature_list.astype(float)
+            
+            print('our method aug_feature_list', aug_feature_list)
 
         aug_feature_list = torch.tensor(aug_feature_list)
 
