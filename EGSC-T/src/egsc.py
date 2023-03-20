@@ -26,9 +26,9 @@ from itertools import repeat
 from torch_geometric.data import Data
 from torch_geometric.loader import DataLoader
 
-torch.manual_seed(0)
-random.seed(0)
-np.random.seed(0)
+# torch.manual_seed(0)
+# random.seed(0)
+# np.random.seed(0)
 
 class EGSCTrainer(object):
     def __init__(self, args):
@@ -100,6 +100,7 @@ class EGSCTrainer(object):
 
         self.real_data_size = self.nged_matrix.size(0)
         
+        print('self.args.synth', self.args.synth) #False
         if self.args.synth:
             if self.args.feature_aug == -1:  # origin shuffle + origin dataset
                 self.synth_data_1, self.synth_data_2, _, synth_nged_matrix = gen_pairs(self.training_graphs.shuffle()[:500], 0, 3)  
@@ -159,17 +160,30 @@ class EGSCTrainer(object):
             synth_data_ind = random.sample(range(len(self.synth_data_1)), 100)
         
         if self.args.feature_aug == -1:
+            print('before',self.training_graphs[0])
+            print('before',self.training_graphs.shuffle()[0])
             source_loader = DataLoader(self.training_graphs.shuffle() + 
                 ([self.synth_data_1[i] for i in synth_data_ind] if self.args.synth else []), batch_size=self.args.batch_size)
+            print('after',self.training_graphs[0])
             target_loader = DataLoader(self.training_graphs.shuffle() + 
                 ([self.synth_data_2[i] for i in synth_data_ind] if self.args.synth else []), batch_size=self.args.batch_size)
         else:
+            print('before self.training_graphs[0]',self.training_graphs[0])
             temp_dataset_shuffle_1 = copy.deepcopy(self.training_graphs)
+            print('before temp_dataset_shuffle_1[0]',temp_dataset_shuffle_1[0])
             random.shuffle(temp_dataset_shuffle_1)
+            print('after temp_dataset_shuffle_1[0]',temp_dataset_shuffle_1[0])
+            print('after self.training_graphs[0]', self.training_graphs[0])
             source_loader = DataLoader(temp_dataset_shuffle_1 + 
                 ([self.synth_data_1[i] for i in synth_data_ind] if self.args.synth else []), batch_size=self.args.batch_size)
+           
+            print('before self.training_graphs[0]',self.training_graphs[0])
             temp_dataset_shuffle_2 = copy.deepcopy(self.training_graphs)
+            print('before temp_dataset_shuffle_2[0]',temp_dataset_shuffle_2[0])
             random.shuffle(temp_dataset_shuffle_2)
+            print('after temp_dataset_shuffle_2[0]',temp_dataset_shuffle_2[0])
+            print('after self.training_graphs[0]', self.training_graphs[0])
+
             target_loader = DataLoader(temp_dataset_shuffle_2 + 
                 ([self.synth_data_2[i] for i in synth_data_ind] if self.args.synth else []), batch_size=self.args.batch_size)
         
@@ -231,6 +245,7 @@ class EGSCTrainer(object):
         loss_list_test = []
         for epoch in epochs:
             
+            print('self.args.plot', self.args.plot) # Flase
             if self.args.plot:
                 if epoch % 10 == 0:
                     self.model_g.train(False)

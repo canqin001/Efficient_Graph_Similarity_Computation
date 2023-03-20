@@ -14,9 +14,9 @@ import pdb
 import copy
 from itertools import repeat
 
-torch.manual_seed(0)
-random.seed(0)
-np.random.seed(0)
+# torch.manual_seed(0)
+# random.seed(0)
+# np.random.seed(0)
 
 def scatter_(name, src, index, dim=0, dim_size=None):
     r"""Aggregates all values from the :attr:`src` tensor at the indices
@@ -279,6 +279,7 @@ def draw_weighted_nodes(filename, g, model):
         # for g in self.training_graphs + self.testing_graphs + (self.synth_data_1 + self.synth_data_2 if self.args.synth else []):
         #     max_node_number = max(max_node_number, int(degree(g.num_nodes).max().item()))
         # print(max_node_number)
+
 def feature_augmentation(dataset, feature_aug_options):
     print('dataset', dataset)
     copy_dataset = copy.deepcopy(dataset)
@@ -293,6 +294,14 @@ def feature_augmentation(dataset, feature_aug_options):
         visited = {}
 
         [graph_adj1, graph_adj2] = edge_index.numpy()
+        adj = [[] for i in range(size)]
+               
+        def addEdge(adj: list, u, v):
+            adj[u].append(v)
+        
+        for idx in range (0, len(graph_adj1)):
+            addEdge(adj, graph_adj1[idx], graph_adj2[idx])
+
 
         w, h = size, size
         full_adj = [[0 for x in range(w)] for y in range(h)] 
@@ -311,9 +320,9 @@ def feature_augmentation(dataset, feature_aug_options):
         
         # method 1: fast identity GIN
         if feature_aug_options == 1: # save if a route exitst
-        # calculate the counts of length k up to a maximum length of max_k
-            max_k = min(10, size)
-            for k in range(3, max_k+1):
+        # calculate the existence of length k up to a maximum length of max_k
+            max_k = 10
+            for k in range(1, max_k+1):
                 Ak = np.linalg.matrix_power(A, k)
 
                 for j in range(0, len(Ak)):
@@ -329,8 +338,21 @@ def feature_augmentation(dataset, feature_aug_options):
                     if(Ak[j][j] > 0):
                         aug_feature_list[j][k] = float(min(round(Ak[j][j] / (2*size), 2), 1))
 
+        # fast ID-GIN original method - You, Jiaxuan, et al. 
+        # "Identity-aware graph neural networks." AAAI 2021
+        elif feature_aug_options == 3:
+            max_k = 10
+            for k in range(1, max_k+1):
+                Ak = np.linalg.matrix_power(A, k)
+                for j in range(0, len(Ak)):
+                    if(Ak[j][j] > 0):
+                        aug_feature_list[j][k] = Ak[j][j]
+        
+            print('edge_index', edge_index)
+            print('aug_feature_list', aug_feature_list)
+            print('graph_item.x', graph_item.x)
 
-        elif feature_aug_options == 3: # only count the number of triangles
+        elif feature_aug_options == 4: # only count the number of triangles
             max_k = 3
 
             for k in range(3, max_k+1):
@@ -341,6 +363,72 @@ def feature_augmentation(dataset, feature_aug_options):
                         count_triangle = min(Ak[j][j], 10)
                         # aug_feature_list[j][k] = round(Ak[j][j] / (2*size),2)
                         aug_feature_list[j][count_triangle] = 1
+
+        elif feature_aug_options == 5: # count the existence of closed circle - start and end at the node i
+            def cal_circle_BFS(s, adj, size, max_k):
+                res = []
+                if len(adj[s]) < 2: return res
+
+                parent = [-1 for i in range(size)]
+                visited = [False for i in range(size)]
+                # Create a queue for BFS
+                q = []
+                # Mark the current node as
+                temp_set = dict()
+                temp_set['node'] = s
+                temp_set['path'] = [s]
+                q.append(temp_set)
+                visited[s] = 0
+                count = 0
+
+                while q != []:
+                    if (count > max_k - 1): return res # keep the depth of BFS within 10 steps
+                    count = count + 1
+                    cur_len = len(q)
+                    #  print('cur_len', cur_len)
+                    #  print(q)
+                    for i in range(cur_len):
+                        cur_set = q.pop(0)
+                        u = cur_set['node']
+                        #  print('u',u)
+                        #  print('path', cur_set['path'])
+                        if (len(adj[u]) < 2):
+                            continue
+                        for v in adj[u]:
+                            if not v in cur_set['path']:
+                            # if visited[v] == False:
+                                visited[v] = count
+                                new_set = dict()
+                                new_set['node'] = v
+                                cur_path = copy.deepcopy(cur_set['path'])
+                                cur_path.append(v)
+                                new_set['path'] = cur_path
+                                q.append(new_set)
+                                parent[v] = u
+                            elif v in cur_set['path'] and cur_set['path'].index(v) != 0:
+                                # print('wrong', cur_set['path'])
+                                continue
+                            elif v == s and parent[u] != v:
+                                # print('find!!!')
+                                # print(cur_set['path'])
+                                res.append(count)
+                                # return count
+                                # elif parent[u] != v:
+                                #     print('count', count)
+                                #     print('visited[v] count', visited[v])
+                                #     return count
+                return res
+            
+            for node_idx in range(0, size):
+                max_k = 10
+                temp_res_list = cal_circle_BFS(node_idx, adj, size, max_k) # all the existence circles with various length
+                for k in temp_res_list:
+                    aug_feature_list[node_idx][k] = 1 # 1 represents exist
+                
+                # aug_feature_list.append([temp])
+            
+            print('our method aug_feature_list', aug_feature_list)
+
 
         aug_feature_list = torch.tensor(aug_feature_list)
 

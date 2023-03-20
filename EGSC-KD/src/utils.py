@@ -15,9 +15,9 @@ import pdb
 import copy
 from itertools import repeat
 
-torch.manual_seed(0)
-random.seed(0)
-np.random.seed(0)
+# torch.manual_seed(0)
+# random.seed(0)
+# np.random.seed(0)
 
 def scatter_(name, src, index, dim=0, dim_size=None):
     r"""Aggregates all values from the :attr:`src` tensor at the indices
