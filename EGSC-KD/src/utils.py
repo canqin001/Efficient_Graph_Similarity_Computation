@@ -242,6 +242,14 @@ def feature_augmentation(dataset, feature_aug_options):
         visited = {}
 
         [graph_adj1, graph_adj2] = edge_index.numpy()
+        adj = [[] for i in range(size)]
+               
+        def addEdge(adj: list, u, v):
+            adj[u].append(v)
+        
+        for idx in range (0, len(graph_adj1)):
+            addEdge(adj, graph_adj1[idx], graph_adj2[idx])
+
 
         w, h = size, size
         full_adj = [[0 for x in range(w)] for y in range(h)] 
@@ -252,44 +260,97 @@ def feature_augmentation(dataset, feature_aug_options):
 
         # number of nodes in the graph
         # n = A.shape[0]
+        def cal_circle_BFS(s, adj, size, max_k):
+            res = []
+            if len(adj[s]) < 2: return res
 
+            parent = [-1 for i in range(size)]
+            visited = [False for i in range(size)]
+            # Create a queue for BFS
+            q = []
+            # Mark the current node as
+            temp_set = dict()
+            temp_set['node'] = s
+            temp_set['path'] = [s]
+            q.append(temp_set)
+            visited[s] = 0
+            count = 0
+
+            while q != []:
+                if (count > max_k - 1): return res # keep the depth of BFS within 10 steps
+                count = count + 1
+                cur_len = len(q)
+                for i in range(cur_len):
+                    cur_set = q.pop(0)
+                    u = cur_set['node']
+                    if (len(adj[u]) < 2):
+                        continue
+                    for v in adj[u]:
+                        if not v in cur_set['path']:
+                            visited[v] = count
+                            new_set = dict()
+                            new_set['node'] = v
+                            cur_path = copy.deepcopy(cur_set['path'])
+                            cur_path.append(v)
+                            new_set['path'] = cur_path
+                            q.append(new_set)
+                            parent[v] = u
+                        elif v in cur_set['path'] and cur_set['path'].index(v) != 0:
+                            continue
+                        elif v == s and parent[u] != v:
+                            res.append(count)
+    
+            return res
+        
         for node_idx in range(0, size):
             temp_list = [0 for i in range(11) ]
             aug_feature_list.append(temp_list)
         
         
-        # method 1: fast identity GIN
-        if feature_aug_options == 1: # save if a route exitst
-        # calculate the counts of length k up to a maximum length of max_k
-            max_k = min(10, size)
-            for k in range(3, max_k+1):
+        # method 1: FCE - fast closed-circle existence 
+        if feature_aug_options == 1: 
+            max_k = 10
+            for k in range(1, max_k+1):
                 Ak = np.linalg.matrix_power(A, k)
-
                 for j in range(0, len(Ak)):
                     if(Ak[j][j] > 0):
-                        aug_feature_list[j][k] = 1
+                        aug_feature_list[j][k] = 1 #  if a kth length closed route exitst
+            print('aug_feature_list', aug_feature_list)
         
-        elif feature_aug_options == 2: # save the count of routes
-            max_k = min(10, size)
-            for k in range(3, max_k+1):
-                Ak = np.linalg.matrix_power(A, k)
-
-                for j in range(0, len(Ak)):
-                    if(Ak[j][j] > 0):
-                        aug_feature_list[j][k] = float(min(round(Ak[j][j] / (2*size), 2), 1))
-
-
-        elif feature_aug_options == 3: # only count the number of triangles
-            max_k = 3
-
-            for k in range(3, max_k+1):
+        # method 2 - FCC - fast closed-circle counting
+        # fast ID-GIN original method - You, Jiaxuan, et al. 
+        # "Identity-aware graph neural networks." AAAI 2021
+        elif feature_aug_options == 2:
+            max_k = 10
+            for k in range(1, max_k+1):
                 Ak = np.linalg.matrix_power(A, k)
                 for j in range(0, len(Ak)):
                     if(Ak[j][j] > 0):
-                        Ak[j][j] = Ak[j][j] // 2 
-                        count_triangle = min(Ak[j][j], 10)
-                        # aug_feature_list[j][k] = round(Ak[j][j] / (2*size),2)
-                        aug_feature_list[j][count_triangle] = 1
+                        aug_feature_list[j][k] = Ak[j][j]
+            print('aug_feature_list', aug_feature_list)
+
+        # method 3 - RCE - real closed-circle existence
+        elif feature_aug_options == 3: # check the existence of closed circle - start and end at the node i
+            for node_idx in range(0, size):
+                max_k = min(10, size)
+                temp_res_list = cal_circle_BFS(node_idx, adj, size, max_k) # all the existence circles with various length
+                for k in temp_res_list:
+                    aug_feature_list[node_idx][k] = 1 # 1 represents exist
+            print('aug_feature_list', aug_feature_list)
+
+        # method 4 - RCC - real closed-circle counting    
+        elif feature_aug_options == 4: # count the number closed circle in length (1...k) - start and end at the node i
+            for node_idx in range(0, size):
+                max_k = min(10, size)
+                temp_res_list = cal_circle_BFS(node_idx, adj, size, max_k) # all the existence circles with various length
+                for k in temp_res_list:
+                    aug_feature_list[node_idx][k] = aug_feature_list[node_idx][k] + 1 # 1 represents exist
+                
+            aug_feature_list = np.array(aug_feature_list)
+            aug_feature_list = aug_feature_list // 2
+            aug_feature_list = aug_feature_list.astype(np.float32)
+            print('aug_feature_list', aug_feature_list)
+
 
         aug_feature_list = torch.tensor(aug_feature_list)
 

@@ -64,12 +64,12 @@ class EGSC_KD_Trainer(object):
         print('load model - wenzhao')
 
         #PATH_g = '../Checkpoints/G_EarlyFusion_Disentangle_' +str(self.args.dataset) +'_gin'+'_checkpoint.pth'
-        PATH_g = '../Checkpoints_wenzhao/EGSC_c_EarlyFusion_' +str(self.args.dataset)+"_"+str(self.args.gnn_operator)+"_" \
+        PATH_g = '../Checkpoints_wenzhao/EGSC_g_EarlyFusion_' +str(self.args.dataset)+"_"+str(self.args.gnn_operator)+"_" \
         + str(self.args.epochs)+"_"+str(self.args.batch_size)+"_"+str(self.args.learning_rate) + "_" + str(self.args.feature_aug) +'_checkpoint.pth'
 
         print('PATH_g', PATH_g)
 
-        self.model_g_fix.load_state_dict(torch.load(PATH_g))
+        self.model_g_fix.load_state_dict(torch.load(PATH_g), strict=False)
 
         print('Model Loaded')
         

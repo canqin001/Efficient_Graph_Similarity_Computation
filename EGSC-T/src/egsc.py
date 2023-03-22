@@ -155,8 +155,8 @@ class EGSCTrainer(object):
             self.number_of_labels = self.training_graphs.num_features 
 
         if self.args.feature_aug >= 0:
-            self.training_graphs = feature_augmentation(self.training_graphs, self.args.feature_aug)
-            self.testing_graphs = feature_augmentation(self.testing_graphs, self.args.feature_aug)
+            self.training_graphs = feature_augmentation(self.training_graphs, self.args.feature_aug, self.args.dataset)
+            self.testing_graphs = feature_augmentation(self.testing_graphs, self.args.feature_aug, self.args.dataset)
             if self.args.feature_aug > 0:
                 self.number_of_labels = self.testing_graphs[0].x.shape[-1]
 
